@@ -35,7 +35,7 @@
 > **待添加**：使用 macOS 自带的屏幕录制（⌘⇧5），录制以下操作：
 > 1. 点击菜单栏图标查看状态
 > 2. 打开 Notes 或 TextEdit
-> 3. 按住 Right Option 键说话（菜单栏图标变化）
+> 3. 按住 Option+Space 组合键说话（菜单栏图标变化）
 > 4. 释放键，等待 2-3 秒
 > 5. 润色后的文字出现在文本框
 > 
@@ -63,7 +63,7 @@
 
 | 功能 | 说明 | 状态 |
 |------|------|------|
-| 🎤 **全局热键录音** | 默认 Right Option 键，可自定义任意组合键 | ✅ |
+| 🎤 **全局热键录音** | 默认 Option+Space 组合键，可自定义任意组合键 | ✅ |
 | 🎯 **智能文本润色** | 移除填充词（um, uh, you know），修正自我纠正 | ✅ |
 | 📝 **列表格式化** | 自动识别"第一、第二"并格式化为列表 | ✅ |
 | 💬 **语气预设** | 中性 / 邮件 / 聊天风格 | ✅ |
@@ -283,7 +283,7 @@ Xcode 会自动：
 
 1. 打开任意文本应用（Notes、TextEdit、浏览器）
 2. 点击文本框，确保光标闪烁
-3. **按住 Right Option 键** (⌥)
+3. **按住 Option+Space 组合键** (⌥Space)
 4. 自然说话："你好世界，这是一个测试"
 5. **松开键**
 6. 等待 2-3 秒
@@ -296,14 +296,16 @@ Xcode 会自动：
 ### 热键设置
 | 设置项 | 默认值 | 说明 |
 |--------|--------|------|
-| 录音热键 | Right Option (⌥) | 可在 Settings → Hotkey 中自定义为任意组合键 |
+| 录音热键 | Option+Space (⌥Space) | 可在 Settings → Hotkey 中自定义为任意组合键 |
 
 ### API 设置
 | 环境变量 | 默认值 | 说明 |
 |----------|--------|------|
 | `OPENAI_API_BASE` | `https://api.openai.com/v1` | 自定义端点（支持兼容 OpenAI 格式的服务） |
-| Whisper 模型 | `whisper-1` | 写死在代码中，可修改 `TranscriptionService.swift` |
-| GPT 模型 | `gpt-4o-mini` | 写死在代码中，可修改 `PolishService.swift` |
+| `VOICEINK_STT_MODEL` | `whisper-1` | 语音转文字模型名 |
+| `VOICEINK_POLISH_MODEL` | `gpt-4o-mini` | 润色用的 Chat 模型名 |
+
+环境变量可在 Xcode 中设置：Product → Scheme → Edit Scheme → Run → Arguments → Environment Variables。API 密钥不走环境变量，只存钥匙串。
 
 ### 文本润色
 | 设置项 | 选项 | 说明 |
@@ -311,6 +313,14 @@ Xcode 会自动：
 | 启用润色 | ON / OFF | 关闭后直接注入原始转录 |
 | 语气 | Neutral / Email / Chat | 影响润色后的语言风格 |
 | 语言 | 自动检测 / en / zh / es / fr | 指定转录语言（可选） |
+
+### Stub 模式
+开启 Stub 模式后完全离线：转录返回固定示例文本，润色使用本地规则（去除 um/uh/you know 和重复词），不调用任何 API。
+
+### ⚠️ 构建注意事项
+- 本项目在 Linux 环境中编写，**尚未在真实 Mac 上编译验证**；首次构建如遇编译错误，欢迎提 Issue/PR。
+- 通过 `Package.swift` 运行时是 SwiftPM 可执行文件而非 `.app`，`Info.plist` 不会被打包；首次访问麦克风时 macOS 可能不弹授权框。若遇到此问题，请在 Xcode 中新建 macOS App target 引入 `Sources/` 并使用仓库中的 `Info.plist`。
+- 辅助功能权限按可执行文件路径授予，重新构建后可能需要在系统设置中重新勾选。
 
 ---
 
@@ -517,7 +527,7 @@ Press **⌘R** in Xcode to build and run.
 ### Usage
 
 1. Open Notes or any text field
-2. **Press and hold Right Option** (⌥)
+2. **Press and hold Option+Space** (⌥Space)
 3. Speak naturally
 4. **Release** the key
 5. Polished text appears!

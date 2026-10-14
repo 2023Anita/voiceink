@@ -2,139 +2,114 @@ import AppKit
 import SwiftUI
 import KeyboardShortcuts
 
-class MenuBarController: ObservableObject {
-    private let statusItem: NSStatusItem
-    private let pipeline: RecordingPipeline
-    
-    @Published var currentState: AppState = .idle
-    
-    enum AppState {
+final class MenuBarController: NSObject, ObservableObject {
+    enum AppState: Equatable {
         case idle
         case recording
         case processing
         case error(String)
     }
-    
+
+    private let statusItem: NSStatusItem
+    private let pipeline = RecordingPipeline()
+    private let statusMenuItem = NSMenuItem(title: "VoiceInk - Ready", action: nil, keyEquivalent: "")
+
+    private lazy var historyWindow = HistoryWindow()
+    private lazy var settingsWindow = SettingsWindow()
+    private lazy var permissionsWindow = PermissionsWindow()
+
+    @Published private(set) var currentState: AppState = .idle
+
     init(statusItem: NSStatusItem) {
         self.statusItem = statusItem
-        self.pipeline = RecordingPipeline()
-        
+        super.init()
+
         setupMenu()
         setupHotkey()
-        
+
         pipeline.onStateChange = { [weak self] state in
             DispatchQueue.main.async {
                 self?.updateState(state)
             }
         }
     }
-    
+
     private func setupMenu() {
         let menu = NSMenu()
-        
-        let statusItem = NSMenuItem(title: "VoiceInk - Ready", action: nil, keyEquivalent: "")
-        statusItem.isEnabled = false
-        menu.addItem(statusItem)
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        menu.addItem(NSMenuItem(title: "History", action: #selector(showHistory), keyEquivalent: "h"))
-        menu.addItem(NSMenuItem(title: "Settings", action: #selector(showSettings), keyEquivalent: ","))
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        menu.addItem(NSMenuItem(title: "Permissions", action: #selector(showPermissions), keyEquivalent: ""))
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        let quitItem = NSMenuItem(title: "Quit VoiceInk", action: #selector(quit), keyEquivalent: "q")
-        menu.addItem(quitItem)
-        
+
+        statusMenuItem.isEnabled = false
+        menu.addItem(statusMenuItem)
+        menu.addItem(.separator())
+        menu.addItem(makeItem("History", #selector(showHistory), "h"))
+        menu.addItem(makeItem("Settings…", #selector(showSettings), ","))
+        menu.addItem(makeItem("Permissions…", #selector(showPermissions), ""))
+        menu.addItem(.separator())
+        menu.addItem(makeItem("Quit VoiceInk", #selector(quit), "q"))
+
         statusItem.menu = menu
     }
-    
+
+    private func makeItem(_ title: String, _ action: Selector, _ key: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.target = self
+        return item
+    }
+
     private func setupHotkey() {
         KeyboardShortcuts.onKeyDown(for: .recordVoice) { [weak self] in
             self?.startRecording()
         }
-        
         KeyboardShortcuts.onKeyUp(for: .recordVoice) { [weak self] in
             self?.stopRecording()
         }
     }
-    
+
     private func startRecording() {
-        guard currentState == .idle else { return }
-        pipeline.startRecording()
+        switch currentState {
+        case .idle, .error:
+            pipeline.startRecording()
+        case .recording, .processing:
+            return
+        }
     }
-    
+
     private func stopRecording() {
         guard currentState == .recording else { return }
         pipeline.stopRecording()
     }
-    
+
     private func updateState(_ state: AppState) {
         currentState = state
-        updateMenuBarIcon()
-        updateMenuTitle()
-    }
-    
-    private func updateMenuBarIcon() {
-        guard let button = statusItem.button else { return }
-        
+
         let iconName: String
-        switch currentState {
+        let title: String
+        switch state {
         case .idle:
             iconName = "mic.circle"
-        case .recording:
-            iconName = "mic.circle.fill"
-        case .processing:
-            iconName = "hourglass"
-        case .error:
-            iconName = "exclamationmark.circle"
-        }
-        
-        button.image = NSImage(systemSymbolName: iconName, accessibilityDescription: "VoiceInk")
-    }
-    
-    private func updateMenuTitle() {
-        guard let menu = statusItem.menu, let firstItem = menu.items.first else { return }
-        
-        let title: String
-        switch currentState {
-        case .idle:
             title = "VoiceInk - Ready"
         case .recording:
-            title = "VoiceInk - Recording..."
+            iconName = "mic.circle.fill"
+            title = "VoiceInk - Recording…"
         case .processing:
-            title = "VoiceInk - Processing..."
+            iconName = "hourglass"
+            title = "VoiceInk - Processing…"
         case .error(let message):
-            title = "VoiceInk - Error: \(message)"
+            iconName = "exclamationmark.circle"
+            title = "Error: \(message)"
         }
-        
-        firstItem.title = title
+
+        statusItem.button?.image = NSImage(systemSymbolName: iconName, accessibilityDescription: "VoiceInk")
+        statusMenuItem.title = title
     }
-    
-    @objc private func showHistory() {
-        let historyWindow = HistoryWindow()
-        historyWindow.show()
-    }
-    
-    @objc private func showSettings() {
-        let settingsWindow = SettingsWindow()
-        settingsWindow.show()
-    }
-    
-    @objc private func showPermissions() {
-        let permissionsWindow = PermissionsWindow()
-        permissionsWindow.show()
-    }
-    
-    @objc private func quit() {
-        NSApplication.shared.terminate(nil)
-    }
+
+    @objc private func showHistory() { historyWindow.show() }
+    @objc private func showSettings() { settingsWindow.show() }
+    @objc private func showPermissions() { permissionsWindow.show() }
+    @objc private func quit() { NSApplication.shared.terminate(nil) }
 }
 
 extension KeyboardShortcuts.Name {
-    static let recordVoice = Self("recordVoice", default: .init(.rightOption))
+    // KeyboardShortcuts cannot register modifier-only shortcuts (e.g. Right Option alone),
+    // so the default is Option+Space; users can rebind it in Settings → Hotkey.
+    static let recordVoice = Self("recordVoice", default: .init(.space, modifiers: [.option]))
 }

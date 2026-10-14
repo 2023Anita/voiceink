@@ -1,82 +1,61 @@
 import Foundation
 
-class RecordingPipeline {
-    private let audioCapture: AudioCaptureService
-    private let transcription: TranscriptionService
-    private let polish: PolishService
-    private let injection: TextInjectionService
-    private let history: HistoryStore
-    private let settings: SettingsStore
-    
+final class RecordingPipeline {
+    private let audioCapture = AudioCaptureService()
+    private let injection = TextInjectionService()
+    private let history = HistoryStore.shared
+    private let settings = SettingsStore.shared
+
     var onStateChange: ((MenuBarController.AppState) -> Void)?
-    
-    init() {
-        self.audioCapture = AudioCaptureService()
-        self.settings = SettingsStore.shared
-        
-        if settings.useStubMode {
-            self.transcription = StubTranscriptionService()
-        } else {
-            self.transcription = WhisperTranscriptionService()
-        }
-        
-        if settings.polishEnabled {
-            self.polish = LLMPolishService()
-        } else {
-            self.polish = PassthroughPolishService()
-        }
-        
-        self.injection = TextInjectionService()
-        self.history = HistoryStore.shared
+
+    // Resolved per run so Settings changes apply without restarting the app.
+    private var transcription: TranscriptionService {
+        settings.useStubMode ? StubTranscriptionService() : WhisperTranscriptionService()
     }
-    
+
+    private var polish: PolishService {
+        guard settings.polishEnabled else { return PassthroughPolishService() }
+        return settings.useStubMode ? RuleBasedPolishService() : LLMPolishService()
+    }
+
     func startRecording() {
-        onStateChange?(.recording)
-        
         do {
             try audioCapture.startRecording()
+            onStateChange?(.recording)
         } catch {
-            onStateChange?(.error("Failed to start recording: \(error.localizedDescription)"))
+            onStateChange?(.error(error.localizedDescription))
         }
     }
-    
+
     func stopRecording() {
         onStateChange?(.processing)
-        
+
         audioCapture.stopRecording { [weak self] result in
-            guard let self = self else { return }
-            
+            guard let self else { return }
             switch result {
             case .success(let audioURL):
                 self.processAudio(audioURL)
             case .failure(let error):
-                self.onStateChange?(.error("Recording failed: \(error.localizedDescription)"))
+                self.onStateChange?(.error(error.localizedDescription))
             }
         }
     }
-    
+
     private func processAudio(_ audioURL: URL) {
+        let transcription = self.transcription
+        let polish = self.polish
+        let tone = settings.tone
+
         Task {
+            defer { try? FileManager.default.removeItem(at: audioURL) }
             do {
                 let transcript = try await transcription.transcribe(audioURL: audioURL)
-                
-                let polished = try await polish.polish(text: transcript, tone: settings.tone)
-                
+                let polished = try await polish.polish(text: transcript, tone: tone)
                 try await injection.inject(text: polished)
-                
-                try await history.addEntry(
-                    original: transcript,
-                    polished: polished,
-                    audioURL: audioURL
-                )
-                
-                await MainActor.run {
-                    self.onStateChange?(.idle)
-                }
+                try await history.addEntry(original: transcript, polished: polished, audioURL: nil)
+                onStateChange?(.idle)
             } catch {
-                await MainActor.run {
-                    self.onStateChange?(.error("Processing failed: \(error.localizedDescription)"))
-                }
+                onStateChange?(.error(error.localizedDescription))
             }
         }
     }

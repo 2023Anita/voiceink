@@ -19,7 +19,7 @@ class WhisperTranscriptionService: TranscriptionService {
         }
         
         let boundary = UUID().uuidString
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/audio/transcriptions")!)
+        var request = URLRequest(url: settings.apiBaseURL.appendingPathComponent("audio/transcriptions"))
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
@@ -36,7 +36,7 @@ class WhisperTranscriptionService: TranscriptionService {
         
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
-        body.append("whisper-1\r\n".data(using: .utf8)!)
+        body.append("\(settings.transcriptionModel)\r\n".data(using: .utf8)!)
         
         if let language = settings.language, !language.isEmpty {
             body.append("--\(boundary)\r\n".data(using: .utf8)!)

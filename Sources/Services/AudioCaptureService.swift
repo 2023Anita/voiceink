@@ -1,61 +1,58 @@
 import Foundation
 import AVFoundation
 
-class AudioCaptureService {
+final class AudioCaptureService {
     private var audioRecorder: AVAudioRecorder?
     private var recordingURL: URL?
-    
-    enum AudioError: Error {
-        case permissionDenied
+
+    enum AudioError: LocalizedError {
         case setupFailed
         case recordingFailed
+
+        var errorDescription: String? {
+            switch self {
+            case .setupFailed: return "Could not prepare the recorder"
+            case .recordingFailed: return "Recording failed (check Microphone permission)"
+            }
+        }
     }
-    
+
     func startRecording() throws {
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileName = "recording_\(Date().timeIntervalSince1970).m4a"
-        recordingURL = tempDir.appendingPathComponent(fileName)
-        
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("voiceink_\(Int(Date().timeIntervalSince1970)).m4a")
+        recordingURL = url
+
         let settings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 44100.0,
+            AVSampleRateKey: 16_000.0,
             AVNumberOfChannelsKey: 1,
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
-        
-        guard let url = recordingURL else {
+
+        do {
+            let recorder = try AVAudioRecorder(url: url, settings: settings)
+            guard recorder.record() else { throw AudioError.recordingFailed }
+            audioRecorder = recorder
+        } catch let error as AudioError {
+            throw error
+        } catch {
             throw AudioError.setupFailed
         }
-        
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .default)
-            try session.setActive(true)
-            
-            audioRecorder = try AVAudioRecorder(url: url, settings: settings)
-            audioRecorder?.record()
-        } catch {
-            throw AudioError.recordingFailed
-        }
     }
-    
+
     func stopRecording(completion: @escaping (Result<URL, Error>) -> Void) {
         guard let recorder = audioRecorder, let url = recordingURL else {
             completion(.failure(AudioError.recordingFailed))
             return
         }
-        
+
         recorder.stop()
-        
-        let session = AVAudioSession.sharedInstance()
-        try? session.setActive(false)
-        
+        audioRecorder = nil
+
         if FileManager.default.fileExists(atPath: url.path) {
             completion(.success(url))
         } else {
             completion(.failure(AudioError.recordingFailed))
         }
-        
-        audioRecorder = nil
     }
 }

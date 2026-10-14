@@ -165,7 +165,7 @@ git push github v1.0.0
 VoiceInk 是一个开源的 macOS 菜单栏应用，提供 AI 驱动的语音输入功能。
 
 ### ✨ 核心功能
-- 🎙️ 全局热键录音（默认 Right Option）
+- 🎙️ 全局热键录音（默认 Option+Space）
 - 🤖 Whisper AI 语音转文字
 - ✨ GPT-4o-mini 智能文本润色
 - ⚡ 通用应用文本注入

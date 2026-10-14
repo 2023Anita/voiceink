@@ -20,13 +20,13 @@ class LLMPolishService: PolishService {
         
         let systemPrompt = buildSystemPrompt(tone: tone)
         
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/chat/completions")!)
+        var request = URLRequest(url: settings.apiBaseURL.appendingPathComponent("chat/completions"))
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let payload: [String: Any] = [
-            "model": "gpt-4o-mini",
+            "model": settings.polishModel,
             "messages": [
                 ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": text]
@@ -86,6 +86,35 @@ class LLMPolishService: PolishService {
 class PassthroughPolishService: PolishService {
     func polish(text: String, tone: String?) async throws -> String {
         return text
+    }
+}
+
+/// Offline polisher used in stub mode: strips common fillers and immediate word repeats.
+/// It does not attempt self-corrections or list formatting; those need the LLM.
+struct RuleBasedPolishService: PolishService {
+    private static let fillerPatterns = [
+        #"\b(um+|uh+|erm|hmm)\b,?\s*"#,
+        #"\byou know,?\s*"#,
+        #"\bI mean,?\s*"#
+    ]
+
+    func polish(text: String, tone: String?) async throws -> String {
+        Self.clean(text)
+    }
+
+    static func clean(_ text: String) -> String {
+        var result = text
+        for pattern in fillerPatterns {
+            result = result.replacingOccurrences(of: pattern, with: "", options: [.regularExpression, .caseInsensitive])
+        }
+        result = result.replacingOccurrences(of: #"\b(\w+)(\s+\1\b)+"#, with: "$1", options: [.regularExpression, .caseInsensitive])
+        result = result.replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+        result = result.replacingOccurrences(of: #"\s+([,.!?])"#, with: "$1", options: .regularExpression)
+        result = result.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let first = result.first {
+            result = first.uppercased() + result.dropFirst()
+        }
+        return result
     }
 }
 

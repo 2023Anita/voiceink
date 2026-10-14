@@ -31,6 +31,16 @@ class SettingsStore: ObservableObject {
         }
     }
     
+    private let environment = ProcessInfo.processInfo.environment
+
+    var apiBaseURL: URL {
+        environment["OPENAI_API_BASE"].flatMap(URL.init(string:)) ?? URL(string: "https://api.openai.com/v1")!
+    }
+
+    var transcriptionModel: String { environment["VOICEINK_STT_MODEL"] ?? "whisper-1" }
+
+    var polishModel: String { environment["VOICEINK_POLISH_MODEL"] ?? "gpt-4o-mini" }
+
     private init() {
         self.useStubMode = UserDefaults.standard.bool(forKey: "useStubMode")
         self.polishEnabled = UserDefaults.standard.object(forKey: "polishEnabled") as? Bool ?? true

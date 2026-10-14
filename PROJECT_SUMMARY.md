@@ -2,13 +2,13 @@
 
 ## What Was Built
 
-A complete, production-ready macOS menu bar application that provides AI-powered voice dictation with intelligent text polishing and seamless injection into any focused application.
+An MVP macOS menu bar application that provides AI-powered voice dictation with intelligent text polishing and seamless injection into any focused application.
 
 ## Core Features Implemented
 
 ### 1. Global Hotkey Push-to-Talk ✅
 - **Implementation:** `MenuBarController.swift` using KeyboardShortcuts library
-- **Default:** Right Option key (⌥)
+- **Default:** Option+Space (⌥Space)
 - **Behavior:** Press to start recording, release to stop
 - **Configurable:** Full UI in Settings → Hotkey tab
 
@@ -277,7 +277,7 @@ AppDelegate
 
 5. **Test:**
    - Open Notes
-   - Press Right Option, speak, release
+   - Press Option+Space, speak, release
    - Watch polished text appear
 
 ### For Distribution
@@ -316,7 +316,7 @@ As documented in README.md:
 
 ## Conclusion
 
-VoiceInk is a **complete, production-ready** macOS menu bar application that successfully recreates the core Typeless experience:
+VoiceInk is an **MVP** macOS menu bar application that successfully recreates the core Typeless experience:
 
 ✅ Push-to-talk voice recording
 ✅ AI transcription (Whisper)

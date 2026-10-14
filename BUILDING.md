@@ -549,6 +549,6 @@ swift build -c release --arch arm64 --arch x86_64
 
 ---
 
-**构建状态**: ✅ 在 macOS 13+ + Xcode 15+ 上构建成功
+**构建状态**: ⚠️ 目标环境 macOS 13+ / Xcode 15+；首次在 Mac 上构建时请反馈任何编译问题
 
 **最后更新**: 2026-10-14

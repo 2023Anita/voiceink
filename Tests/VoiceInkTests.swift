@@ -22,16 +22,23 @@ final class VoiceInkTests: XCTestCase {
     }
     
     func testSettingsStore() {
-        let settings = SettingsStore()
-        
+        let settings = SettingsStore.shared
+        let original = (settings.useStubMode, settings.polishEnabled, settings.tone)
+        defer { (settings.useStubMode, settings.polishEnabled, settings.tone) = original }
+
         settings.useStubMode = true
         XCTAssertTrue(settings.useStubMode)
-        
+
         settings.polishEnabled = false
         XCTAssertFalse(settings.polishEnabled)
-        
+
         settings.tone = "email"
         XCTAssertEqual(settings.tone, "email")
+    }
+
+    func testRuleBasedPolishRemovesFillersAndRepeats() {
+        let input = "um so I think think we should, you know, ship it"
+        XCTAssertEqual(RuleBasedPolishService.clean(input), "So I think we should, ship it")
     }
     
     func testKeychainHelper() {
