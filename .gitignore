@@ -1,0 +1,45 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+*.xcodeproj
+xcuserdata/
+DerivedData/
+*.xcworkspace
+
+# Xcode
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.pbxuser
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+*.xccheckout
+*.moved-aside
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Secrets and keys
+*.key
+*.pem
+secrets/
+.env
+
+# Build artifacts
+*.app
+*.dSYM.zip
+*.dSYM
+
+# Testing
+.coverage
+*.profdata
+
+# Temporary files
+*.swp
+*.swo
+*~
